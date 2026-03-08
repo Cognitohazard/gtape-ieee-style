@@ -1,5 +1,6 @@
 *
-.github
+!.github
+!.github/**
 !.gitignore
 !ieee.csl
 !README.md

@@ -122,7 +122,7 @@
   </macro>
   <macro name="author">
     <names variable="author">
-      <name and="text" et-al-min="3" et-al-use-first="3" initialize-with="." delimiter-precedes-et-al="never" delimiter-precedes-last="never"/>
+      <name and="text" et-al-min="4" et-al-use-first="3" initialize-with="." delimiter-precedes-et-al="never" delimiter-precedes-last="never"/>
       <label form="short" prefix=", " text-case="capitalize-first"/>
       <et-al font-style="italic"/>
       <substitute>
@@ -140,7 +140,7 @@
   </macro>
   <macro name="director">
     <names variable="director">
-      <name and="text" et-al-min="3" et-al-use-first="3" initialize-with="." delimiter-precedes-et-al="never" delimiter-precedes-last="never"/>
+      <name and="text" et-al-min="4" et-al-use-first="3" initialize-with="." delimiter-precedes-et-al="never" delimiter-precedes-last="never"/>
       <et-al font-style="italic"/>
     </names>
   </macro>

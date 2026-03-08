@@ -38,7 +38,7 @@ git commit -m "Merge upstream IEEE style updates"
 When merging upstream changes, make sure to keep these GTAPE-specific modifications:
 
 1. **Info section**: Keep title as "IEEE-GTAPE" and id/link pointing to this repo
-2. **Author macro** (~line 125): `et-al-min="3" et-al-use-first="3" initialize-with="." delimiter-precedes-et-al="never" delimiter-precedes-last="never"`
+2. **Author macro** (~line 125): `et-al-min="4" et-al-use-first="3" initialize-with="." delimiter-precedes-et-al="never" delimiter-precedes-last="never"`
 3. **Director macro** (~line 143): Same et-al settings as author
 4. **Access macro**: DOI output section should be removed (no `<else-if match="any" variable="DOI">` block)
 5. **Citation element** (~line 322): Keep `collapse="citation-number"` attribute

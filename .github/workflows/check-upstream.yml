@@ -1,0 +1,53 @@
+name: Check upstream IEEE style
+on:
+  schedule:
+    - cron: '0 0 * * 1' # weekly on Monday
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch upstream ieee.csl
+        run: |
+          curl -sL https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl \
+            -o ieee.csl.upstream
+
+      - name: Check for differences
+        id: diff
+        run: |
+          if ! diff -q ieee.csl ieee.csl.upstream > /dev/null 2>&1; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create PR if changed
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH="upstream-update-$(date +%Y%m%d)"
+          git checkout -b "$BRANCH"
+          mv ieee.csl.upstream ieee.csl.upstream.txt
+          git add ieee.csl.upstream.txt
+          git commit -m "chore: upstream ieee.csl updated"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --title "Upstream IEEE style has changed" \
+            --body "$(cat <<'EOF'
+          ## Upstream update detected
+
+          The upstream `ieee.csl` from [citation-style-language/styles](https://github.com/citation-style-language/styles) has been updated.
+
+          ### What to do
+          1. Compare `ieee.csl.upstream.txt` against `ieee.csl`
+          2. Manually merge any desired changes while preserving GTAPE customizations (see README)
+          3. Delete `ieee.csl.upstream.txt` before merging this PR
+          EOF
+          )"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
