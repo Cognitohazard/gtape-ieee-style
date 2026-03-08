@@ -18,60 +18,75 @@ jobs:
           curl -sL https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl \
             -o ieee.csl.upstream
 
-      - name: Check if upstream changed since last snapshot
-        id: diff
+      - name: Check for upstream changes
+        id: check
         run: |
-          if [ -f .upstream-snapshot/ieee.csl ]; then
-            # Compare upstream against our last-seen snapshot
-            if ! diff -q .upstream-snapshot/ieee.csl ieee.csl.upstream > /dev/null 2>&1; then
-              echo "changed=true" >> "$GITHUB_OUTPUT"
-            fi
-          else
-            # No snapshot yet — create one without opening a PR
+          if [ ! -f .upstream-baseline/ieee.csl ]; then
             echo "init=true" >> "$GITHUB_OUTPUT"
+          elif ! diff -q .upstream-baseline/ieee.csl ieee.csl.upstream > /dev/null 2>&1; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Initialize snapshot
-        if: steps.diff.outputs.init == 'true'
+      - name: Initialize baseline
+        if: steps.check.outputs.init == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p .upstream-snapshot
-          cp ieee.csl.upstream .upstream-snapshot/ieee.csl
-          git add -f .upstream-snapshot/ieee.csl
-          git commit -m "chore: initialize upstream snapshot"
+          mkdir -p .upstream-baseline
+          cp ieee.csl.upstream .upstream-baseline/ieee.csl
+          git add -f .upstream-baseline/ieee.csl
+          git commit -m "chore: initialize upstream baseline"
           git push
 
-      - name: Create PR with upstream changes
-        if: steps.diff.outputs.changed == 'true'
+      # 3-way merge: baseline (common ancestor) + upstream (theirs) + ieee.csl (ours)
+      - name: Merge upstream changes
+        if: steps.check.outputs.changed == 'true'
+        id: merge
+        run: |
+          # git merge-file modifies the first file in place
+          # Returns 0 on clean merge, >0 on conflicts
+          cp ieee.csl ieee.csl.merged
+          if git merge-file ieee.csl.merged .upstream-baseline/ieee.csl ieee.csl.upstream; then
+            echo "clean=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Auto-apply clean merge
+        if: steps.merge.outputs.clean == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          BRANCH="upstream-update-$(date +%Y%m%d)"
+          cp ieee.csl.merged ieee.csl
+          cp ieee.csl.upstream .upstream-baseline/ieee.csl
+          git add ieee.csl .upstream-baseline/ieee.csl
+          git commit -m "chore: auto-merge upstream IEEE style update"
+          git push
+
+      - name: Open PR for conflicting merge
+        if: steps.merge.outputs.conflict == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          BRANCH="upstream-conflict-$(date +%Y%m%d)"
           git checkout -b "$BRANCH"
 
-          # Update the snapshot to the new upstream version
-          mkdir -p .upstream-snapshot
-          cp ieee.csl.upstream .upstream-snapshot/ieee.csl
-          git add -f .upstream-snapshot/ieee.csl
-
-          # Also include the upstream file for easy comparison
-          cp ieee.csl.upstream ieee.csl.upstream.txt
-          git add -f ieee.csl.upstream.txt
-
-          git commit -m "chore: upstream ieee.csl updated"
+          # Include the merged file with conflict markers
+          cp ieee.csl.merged ieee.csl
+          cp ieee.csl.upstream .upstream-baseline/ieee.csl
+          git add ieee.csl .upstream-baseline/ieee.csl
+          git commit -m "chore: upstream update with merge conflicts"
           git push -u origin "$BRANCH"
+
           gh pr create \
-            --title "Upstream IEEE style has changed" \
+            --title "Upstream IEEE style update needs manual merge" \
             --body "$(cat <<'EOF'
-          ## Upstream update detected
+          ## Merge conflict with upstream
 
-          The upstream `ieee.csl` from [citation-style-language/styles](https://github.com/citation-style-language/styles) has been updated.
+          The upstream `ieee.csl` changed in a way that conflicts with GTAPE customizations.
+          The file contains conflict markers (`<<<<<<<`) that need manual resolution.
 
-          ### What to do
-          1. Compare `ieee.csl.upstream.txt` against `ieee.csl`
-          2. Manually merge any desired changes while preserving GTAPE customizations (see README)
-          3. Delete `ieee.csl.upstream.txt` before merging this PR
+          See README for the list of GTAPE customizations to preserve.
           EOF
           )"
         env:
