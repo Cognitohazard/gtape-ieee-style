@@ -18,22 +18,47 @@ jobs:
           curl -sL https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl \
             -o ieee.csl.upstream
 
-      - name: Check for differences
+      - name: Check if upstream changed since last snapshot
         id: diff
         run: |
-          if ! diff -q ieee.csl ieee.csl.upstream > /dev/null 2>&1; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+          if [ -f .upstream-snapshot/ieee.csl ]; then
+            # Compare upstream against our last-seen snapshot
+            if ! diff -q .upstream-snapshot/ieee.csl ieee.csl.upstream > /dev/null 2>&1; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            # No snapshot yet — create one without opening a PR
+            echo "init=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create PR if changed
+      - name: Initialize snapshot
+        if: steps.diff.outputs.init == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p .upstream-snapshot
+          cp ieee.csl.upstream .upstream-snapshot/ieee.csl
+          git add -f .upstream-snapshot/ieee.csl
+          git commit -m "chore: initialize upstream snapshot"
+          git push
+
+      - name: Create PR with upstream changes
         if: steps.diff.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           BRANCH="upstream-update-$(date +%Y%m%d)"
           git checkout -b "$BRANCH"
-          mv ieee.csl.upstream ieee.csl.upstream.txt
+
+          # Update the snapshot to the new upstream version
+          mkdir -p .upstream-snapshot
+          cp ieee.csl.upstream .upstream-snapshot/ieee.csl
+          git add -f .upstream-snapshot/ieee.csl
+
+          # Also include the upstream file for easy comparison
+          cp ieee.csl.upstream ieee.csl.upstream.txt
           git add -f ieee.csl.upstream.txt
+
           git commit -m "chore: upstream ieee.csl updated"
           git push -u origin "$BRANCH"
           gh pr create \
