@@ -33,7 +33,7 @@ jobs:
           BRANCH="upstream-update-$(date +%Y%m%d)"
           git checkout -b "$BRANCH"
           mv ieee.csl.upstream ieee.csl.upstream.txt
-          git add ieee.csl.upstream.txt
+          git add -f ieee.csl.upstream.txt
           git commit -m "chore: upstream ieee.csl updated"
           git push -u origin "$BRANCH"
           gh pr create \
