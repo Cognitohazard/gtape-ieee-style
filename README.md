@@ -1,6 +1,6 @@
 # GTAPE IEEE Citation Styles
 
-Two customized IEEE styles based on the official [CSL IEEE style](https://github.com/citation-style-language/styles/blob/master/ieee.csl). This project tracks that single upstream file, not updates to the entire CSL styles collection.
+Two customized IEEE styles based on the official [CSL IEEE style](https://github.com/citation-style-language/styles/blob/master/ieee.csl). This standalone repository tracks that single upstream file, not updates to the entire CSL styles collection.
 
 ## Install
 
