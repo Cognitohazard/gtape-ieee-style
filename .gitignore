@@ -3,4 +3,5 @@
 !.github/**
 !.gitignore
 !ieee.csl
+!ieee-no-collapse.csl
 !README.md
