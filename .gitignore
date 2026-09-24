@@ -1,7 +1,7 @@
-*
-!.github
-!.github/**
-!.gitignore
-!ieee.csl
-!ieee-no-collapse.csl
-!README.md
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.cache/
+*.upstream
+*.merged

@@ -1,0 +1,2 @@
+# Keep the official vendored sources unchanged, including upstream whitespace.
+tests/vendor/** linguist-vendored -whitespace

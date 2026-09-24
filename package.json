@@ -1,0 +1,10 @@
+{
+  "name": "gtape-ieee-style",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/render.test.cjs"
+  },
+  "devDependencies": {
+    "citeproc": "2.4.63"
+  }
+}

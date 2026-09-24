@@ -1,103 +1,87 @@
 name: Check upstream IEEE style
+
 on:
   schedule:
-    - cron: '0 0 * * 1' # weekly on Monday
+    - cron: '0 0 * * 1'
   workflow_dispatch:
+
+concurrency:
+  group: upstream-ieee-update
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
 
 jobs:
   check:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Fetch upstream ieee.csl
+        with:
+          ref: master
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Leave an existing update available for review
+        id: pending
         run: |
-          curl -sL https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl \
-            -o ieee.csl.upstream
-
-      - name: Check for upstream changes
-        id: check
-        run: |
-          if [ ! -f .upstream-baseline/ieee.csl ]; then
-            echo "init=true" >> "$GITHUB_OUTPUT"
-          elif ! diff -q .upstream-baseline/ieee.csl ieee.csl.upstream > /dev/null 2>&1; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+          pending=$(gh pr list --state open --json headRefName --jq '[.[] | select(.headRefName | startswith("upstream-ieee-"))] | length')
+          echo "count=$pending" >> "$GITHUB_OUTPUT"
+          if [ "$pending" != 0 ]; then
+            echo 'An upstream update is already awaiting review; its branch will not be overwritten.' >> "$GITHUB_STEP_SUMMARY"
           fi
-
-      - name: Initialize baseline
-        if: steps.check.outputs.init == 'true'
+      - name: Fetch only the upstream IEEE file at a known commit
+        if: steps.pending.outputs.count == '0'
+        id: upstream
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p .upstream-baseline
-          cp ieee.csl.upstream .upstream-baseline/ieee.csl
-          git add -f .upstream-baseline/ieee.csl
-          git commit -m "chore: initialize upstream baseline"
-          git push
-
-      # 3-way merge each variant against the shared upstream baseline
-      - name: Merge upstream changes
-        if: steps.check.outputs.changed == 'true'
-        id: merge
-        run: |
-          # git merge-file modifies the first file in place
-          # Returns 0 on clean merge, >0 on conflicts
-          conflict=false
-          for style in ieee.csl ieee-no-collapse.csl; do
-            cp "$style" "$style.merged"
-            if git merge-file "$style.merged" .upstream-baseline/ieee.csl ieee.csl.upstream; then
-              :
-            else
-              conflict=true
-            fi
-          done
-          if [ "$conflict" = false ]; then
-            echo "clean=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "conflict=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Auto-apply clean merge
-        if: steps.merge.outputs.clean == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          cp ieee.csl.merged ieee.csl
-          cp ieee-no-collapse.csl.merged ieee-no-collapse.csl
-          cp ieee.csl.upstream .upstream-baseline/ieee.csl
-          git add ieee.csl ieee-no-collapse.csl .upstream-baseline/ieee.csl
-          git commit -m "chore: auto-merge upstream IEEE style update"
-          git push
-
-      - name: Open PR for conflicting merge
-        if: steps.merge.outputs.conflict == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          BRANCH="upstream-conflict-$(date +%Y%m%d)"
-          git checkout -b "$BRANCH"
-
-          # Include both merged variants, preserving conflict markers for review
-          cp ieee.csl.merged ieee.csl
-          cp ieee-no-collapse.csl.merged ieee-no-collapse.csl
-          cp ieee.csl.upstream .upstream-baseline/ieee.csl
-          git add ieee.csl ieee-no-collapse.csl .upstream-baseline/ieee.csl
-          git commit -m "chore: upstream update with merge conflicts"
-          git push -u origin "$BRANCH"
-
-          gh pr create \
-            --title "Upstream IEEE style update needs manual merge" \
-            --body "$(cat <<'EOF'
-          ## Merge conflict with upstream
-
-          The upstream `ieee.csl` changed in a way that conflicts with GTAPE customizations.
-          One or both style files contain conflict markers (`<<<<<<<`) that need manual resolution.
-
-          See README for the list of GTAPE customizations to preserve.
-          EOF
-          )"
+          sha=$(gh api repos/citation-style-language/styles/commits/master --jq '.sha')
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://raw.githubusercontent.com/citation-style-language/styles/$sha/ieee.csl" \
+            -o "$RUNNER_TEMP/ieee.csl.upstream"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Prepare both variants for review
+        if: steps.pending.outputs.count == '0'
+        id: update
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
+        run: python scripts/update_upstream.py "$RUNNER_TEMP/ieee.csl.upstream" "$UPSTREAM_SHA"
+      - name: Open an update pull request
+        if: steps.update.outputs.changed == 'true'
+        env:
+          UPSTREAM_SHA: ${{ steps.upstream.outputs.sha }}
+          HAS_CONFLICTS: ${{ steps.update.outputs.conflict }}
+        run: |
+          branch="upstream-ieee-${UPSTREAM_SHA:0:12}"
+          if git ls-remote --exit-code --heads origin "$branch"; then
+            echo "An update branch already exists: $branch. Reopen or resolve its pull request." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          git switch -c "$branch"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- ieee.csl ieee-no-collapse.csl .upstream-baseline
+          if [ -d .upstream-review ]; then
+            git add -f -- .upstream-review
+          fi
+          git commit -m "Update IEEE style from upstream ${UPSTREAM_SHA:0:12}"
+          git push --set-upstream origin "$branch"
+          body="$RUNNER_TEMP/upstream-pr.md"
+          printf 'Update the IEEE style from [upstream commit %s](https://github.com/citation-style-language/styles/commit/%s).\n\n' "$UPSTREAM_SHA" "$UPSTREAM_SHA" > "$body"
+          printf 'Both GTAPE variants are included. Review the diff and require the **Validate styles** check to pass before merging.\n' >> "$body"
+          draft=()
+          if [ "$HAS_CONFLICTS" = true ]; then
+            draft=(--draft)
+            printf '\nConflicts require manual resolution. See `.upstream-review/README.md`. The installable styles and accepted upstream baseline are unchanged; validation intentionally fails until resolution.\n' >> "$body"
+          fi
+          gh pr create --base master --head "$branch" --title 'Update IEEE style from upstream' --body-file "$body" "${draft[@]}"
+          # Explicit dispatch runs validation on this branch even when the bot's
+          # pull_request event requires approval or does not trigger automatically.
+          gh workflow run validate.yml --ref "$branch"
+      - name: Report unchanged upstream
+        if: steps.update.outputs.changed == 'false'
+        run: echo 'The upstream IEEE file has not changed.' >> "$GITHUB_STEP_SUMMARY"

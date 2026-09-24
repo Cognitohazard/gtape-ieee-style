@@ -1,60 +1,55 @@
-# GTAPE IEEE Citation Style
+# GTAPE IEEE Citation Styles
 
-A modified IEEE citation style based on the official [citation-style-language/styles](https://github.com/citation-style-language/styles) repository.
+Two customized IEEE styles based on the official [CSL IEEE style](https://github.com/citation-style-language/styles/blob/master/ieee.csl). This project tracks that single upstream file, not updates to the entire CSL styles collection.
 
-## Available Variants
+## Install
 
-| File | Style name | Consecutive citations |
+Download a `.csl` file below, then in Zotero open **Settings → Cite → Styles → +** and select the downloaded file. Both variants can be installed together because they have distinct style IDs.
+
+| File | Zotero style name | Consecutive citations |
 | --- | --- | --- |
-| [ieee.csl](ieee.csl) | IEEE-GTAPE | Collapsed into a range |
-| [ieee-no-collapse.csl](ieee-no-collapse.csl) | IEEE-GTAPE (No Citation Collapse) | Each number shown separately: [1], [2], [3] |
+| [ieee.csl](https://raw.githubusercontent.com/Cognitohazard/gtape-ieee-style/master/ieee.csl) | IEEE-GTAPE | Collapsed into a range |
+| [ieee-no-collapse.csl](https://raw.githubusercontent.com/Cognitohazard/gtape-ieee-style/master/ieee-no-collapse.csl) | IEEE-GTAPE (No Citation Collapse) | [1], [2], [3] |
 
-Both variants show the first three authors followed by italicized *et al.* for four or more authors, with no comma before *et al.*, and hide DOI output. They retain the existing name formatting, oldest-first bibliography order, and punctuation. The existing suppression of URLs and access dates is also retained.
+Both variants retain:
 
-Install the desired `.csl` file in your reference manager. The variants have distinct style IDs, so both can be installed together.
+- The first three authors followed by italicized *et al.* for four or more authors, with no comma before *et al.*; the same settings apply to directors and author substitutions.
+- Suppressed DOI, URL, and access-date output.
+- The existing name initialization and punctuation, with the bibliography sorted oldest first, then by citation number.
 
-The weekly upstream workflow maintains both variants. When merging upstream changes manually, update both files against `.upstream-baseline/ieee.csl`, preserve their respective citation behavior and metadata, and refresh the baseline only after both files are merged.
+There is still a space between initials and the surname; this project does not implement the requested removal of that space.
 
-## Implemented Customizations
-- Citations collapse in the style of [1]-[5] in `ieee.csl`; `ieee-no-collapse.csl` lists every number separately
-- Authors' names collapse to *et al.* after 3 names, with no delimiter before it
-- DOI is hidden
+## Upstream updates
 
-## Unimplemented Styles
-The professor wants there to be only a period but no space between initialized first name and last name. As far as I know it's not doable with CSL 1.0.2 specification.
+The **Check upstream IEEE style** workflow runs every Monday at 00:00 UTC and can also be started from the Actions tab. It downloads only `ieee.csl` at a recorded upstream commit and compares it with `.upstream-baseline/ieee.csl`.
 
-## Updating from Upstream
+When the file changes, the workflow prepares three-way merges for both variants and opens a pull request. It never pushes directly to `master` and never automatically merges a pull request. An existing open upstream update is left intact so manual resolutions are not overwritten.
 
-To pull the latest changes from the official IEEE style and merge with GTAPE customizations:
+- Clean updates include both styles and the new baseline with its source commit.
+- Conflicting updates open a draft pull request with proposals and instructions under `.upstream-review/`. The installed styles and accepted baseline stay unchanged. Validation intentionally fails until the conflicts are resolved and that directory is removed.
+- **Validate styles** must pass before merging. Review the diff and rendered examples before accepting an update. If GitHub requests approval to run a bot-created pull request's workflows, approve the run; the updater also explicitly dispatches validation on the proposed branch.
+- If an update was closed without merging, reopen its pull request to resume work. The updater will not overwrite an existing update branch.
 
-```bash
-# 1. Fetch the latest from upstream
-git fetch upstream master
+The baseline's `source.json` records a commit at which the upstream file was verified; it need not be the commit that originally changed that file.
 
-# 2. Extract the upstream ieee.csl to a temporary file
-git show upstream/master:ieee.csl > ieee.csl.upstream
+## Validation and examples
 
-# 3. Compare the two files to see what changed
-diff ieee.csl ieee.csl.upstream
+Every pull request and push to `master` runs the official pinned **CSL 1.0.2** schema, its macro-reference checks, rendering examples with citeproc-js, and tests of the update process. Schema and locale sources and licenses are recorded in [tests/vendor/README.md](tests/vendor/README.md).
 
-# 4. Manually merge any desired upstream changes into ieee.csl
-#    while preserving GTAPE customizations (see below)
+For local checks, use Python 3.12+ and Node.js 22+:
 
-# 5. Clean up and commit
-rm ieee.csl.upstream
-git add ieee.csl
-git commit -m "Merge upstream IEEE style updates"
+```sh
+python -m pip install -r requirements-dev.txt
+npm ci --ignore-scripts
+python scripts/validate.py
+npm test
+python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-### GTAPE Customizations to Preserve
+The rendering tests cover collapsed and expanded citations, page locators, three/four-author boundaries, directors, editor substitution, hidden access fields, bibliography order, and a reviewed output snapshot. When deliberately changing formatting, update `tests/expected-rendering.json` using `UPDATE_RENDER_SNAPSHOT=1 npm test` in a POSIX shell, then inspect the resulting diff. Do not regenerate snapshots merely to make a failing check pass.
 
-When merging upstream changes, make sure to keep these GTAPE-specific modifications:
+Preserve each style's title, ID, and self link. Keep `collapse="citation-number"` only in `ieee.csl`. The empty-output access macro must retain `<text value=""/>`; an entirely empty macro is invalid CSL.
 
-1. **Info section**: Preserve each variant's distinct title, ID, and self link
-2. **Author macro** (~line 125): `et-al-min="4" et-al-use-first="3" initialize-with="." delimiter-precedes-et-al="never" delimiter-precedes-last="never"`
-3. **Director macro** (~line 143): Same et-al settings as author
-4. **Access macro**: DOI output section should be removed (no `<else-if match="any" variable="DOI">` block)
-5. **Citation element**: Keep `collapse="citation-number"` in `ieee.csl`; omit it in `ieee-no-collapse.csl`
-6. **Article-journal bibliography**: Use period (not comma) before access macro
-7. **Access macro**: Keep `<text value=""/>` to suppress DOI, URL, and access-date output. CSL requires a rendering element, so do not leave the macro empty.
-8. **Bibliography sort**: Keep issued date ascending, then citation number ascending
+## Attribution and license
+
+The styles derive from the [Citation Style Language styles project](https://github.com/citation-style-language/styles). Original authors and contributors remain credited inside both files. Style adaptations retain the [Creative Commons Attribution-ShareAlike 3.0 license](https://creativecommons.org/licenses/by-sa/3.0/) declared in their `<rights>` elements. GTAPE modifications include author truncation, suppression of access information, bibliography ordering, and the citation-collapse variant.
