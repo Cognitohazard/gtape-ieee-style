@@ -64,7 +64,7 @@ jobs:
           git switch -c "$branch"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- ieee.csl ieee-no-collapse.csl ieee-no-collapse-citation-order.csl .upstream-baseline
+          git add -- ieee.csl ieee-no-collapse.csl ieee-no-collapse-citation-order.csl ieee-no-collapse-citation-order-abbreviated-venues.csl .upstream-baseline
           if [ -d .upstream-review ]; then
             git add -f -- .upstream-review
           fi

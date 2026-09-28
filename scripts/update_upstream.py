@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 
-STYLES = ("ieee.csl", "ieee-no-collapse.csl", "ieee-no-collapse-citation-order.csl")
+STYLES = ("ieee.csl", "ieee-no-collapse.csl", "ieee-no-collapse-citation-order.csl", "ieee-no-collapse-citation-order-abbreviated-venues.csl")
 NS = "{http://purl.org/net/xbiblio/csl}"
 
 
