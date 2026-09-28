@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
 
-STYLES = ("ieee.csl", "ieee-no-collapse.csl")
+STYLES = ("ieee.csl", "ieee-no-collapse.csl", "ieee-no-collapse-citation-order.csl")
 NS = "{http://purl.org/net/xbiblio/csl}"
 
 
@@ -51,7 +51,7 @@ def prepare(root, incoming, commit):
         "path": "ieee.csl", "commit": commit
     }, indent=2) + "\n"
     if conflicts:
-        # Keep both installable styles and the accepted baseline unchanged.
+        # Keep all installable styles and the accepted baseline unchanged.
         review = root / ".upstream-review"
         review.mkdir()
         for name, content in merged.items():
@@ -61,9 +61,9 @@ def prepare(root, incoming, commit):
         (review / "README.md").write_text(
             "# Resolve upstream conflicts\n\nConflicts: " + ", ".join(conflicts) + ".\n\n"
             "The .csl.txt files contain proposed merges, including conflict markers.\n"
-            "Resolve both proposals into the root style files, preserving GTAPE customizations.\n"
+            "Resolve all proposals into the root style files, preserving GTAPE customizations.\n"
             "Copy ieee.csl.upstream to .upstream-baseline/ieee.csl and source.json to\n"
-            ".upstream-baseline/source.json only after resolving both styles.\n"
+            ".upstream-baseline/source.json only after resolving all styles.\n"
             "Remove this .upstream-review directory, run validation and rendering tests,\n"
             "then mark the pull request ready for review. Do not merge with this directory present.\n",
             encoding="utf-8", newline="\n"

@@ -32,7 +32,7 @@ class UpstreamTests(unittest.TestCase):
         self.assertEqual(self.run_update(BASE), {"changed": "false", "conflict": "false"})
         self.assertFalse((self.root / ".upstream-baseline/source.json").exists())
 
-    def test_clean_update_updates_both_styles_and_baseline(self):
+    def test_clean_update_updates_all_styles_and_baseline(self):
         incoming = BASE.replace("upstream", "upstream changed")
         self.assertEqual(self.run_update(incoming)["conflict"], "false")
         for path in [self.baseline, *(self.root / name for name in update.STYLES)]:
@@ -40,13 +40,14 @@ class UpstreamTests(unittest.TestCase):
         source = json.loads((self.root / ".upstream-baseline/source.json").read_text())
         self.assertEqual(source["commit"], SHA)
 
-    def test_conflict_preserves_both_styles_and_baseline(self):
+    def test_conflict_preserves_all_styles_and_baseline(self):
         original = BASE.replace("upstream", "customized locally")
         (self.root / update.STYLES[0]).write_text(original, encoding="utf-8")
         incoming = BASE.replace("upstream", "upstream changed")
         self.assertEqual(self.run_update(incoming)["conflict"], "true")
         self.assertEqual((self.root / update.STYLES[0]).read_text(), original)
-        self.assertEqual((self.root / update.STYLES[1]).read_text(), BASE)
+        for name in update.STYLES[1:]:
+            self.assertEqual((self.root / name).read_text(), BASE)
         self.assertEqual(self.baseline.read_text(), BASE)
         review = self.root / ".upstream-review"
         self.assertIn("<<<<<<<", (review / "ieee.csl.txt").read_text())

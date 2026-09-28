@@ -18,7 +18,7 @@ def main():
     valid = True
     ids = set()
     ns = {"c": "http://purl.org/net/xbiblio/csl"}
-    for filename in ("ieee.csl", "ieee-no-collapse.csl"):
+    for filename in ("ieee.csl", "ieee-no-collapse.csl", "ieee-no-collapse-citation-order.csl"):
         try:
             doc = etree.parse(str(ROOT / filename))
             for validator in (relaxng, schematron):
@@ -27,7 +27,7 @@ def main():
                     valid = False
             style_id = doc.findtext("c:info/c:id", namespaces=ns)
             if style_id in ids:
-                raise ValueError("Both styles must have distinct IDs")
+                raise ValueError("All styles must have distinct IDs")
             ids.add(style_id)
             print(f"Checked {filename}")
         except (etree.XMLSyntaxError, ValueError) as exc:
