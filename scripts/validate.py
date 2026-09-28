@@ -18,7 +18,7 @@ def main():
     valid = True
     ids = set()
     ns = {"c": "http://purl.org/net/xbiblio/csl"}
-    for filename in ("ieee.csl", "ieee-no-collapse.csl", "ieee-no-collapse-citation-order.csl"):
+    for filename in ("ieee.csl", "ieee-no-collapse.csl", "ieee-no-collapse-citation-order.csl", "ieee-no-collapse-citation-order-abbreviated-venues.csl"):
         try:
             doc = etree.parse(str(ROOT / filename))
             for validator in (relaxng, schematron):

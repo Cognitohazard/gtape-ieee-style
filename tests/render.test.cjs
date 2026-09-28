@@ -28,8 +28,8 @@ const items = [
 ].map(item => ({ ...item, DOI: '10.1234/hidden-doi', URL: 'https://example.invalid/hidden-url',
   accessed: { 'date-parts': [[2025, 8, 20]] } }));
 
-function createProcessor(filename) {
-  const byId = Object.fromEntries(items.map(item => [item.id, item]));
+function createProcessor(filename, data = items) {
+  const byId = Object.fromEntries(data.map(item => [item.id, item]));
   const processor = new CSL.Engine({ retrieveLocale: () => locale, retrieveItem: id => byId[id] },
     fs.readFileSync(path.join(root, filename), 'utf8'), 'en-US');
   return processor;
@@ -84,6 +84,64 @@ test('first appearance across separate citations determines numbering, including
   const entries = processor.makeBibliography()[1];
   ['Website example', 'Book example', 'Journal example'].forEach((title, index) =>
     assert.ok(entries[index].includes(title)));
+});
+
+
+const abbreviatedStyle = 'ieee-no-collapse-citation-order-abbreviated-venues.csl';
+test('abbreviated-venue variant preserves numbering, names, and hidden access information', () => {
+  assert.deepEqual(render(abbreviatedStyle), citationOrder);
+});
+
+const venueItems = [
+  { id: 'short-journal', type: 'article-journal', 'container-title': 'Journal of Example Research',
+    'container-title-short': 'J. Example Res.' },
+  { id: 'short-conference', type: 'paper-conference', 'container-title': 'Proceedings of the Example Research Conference',
+    'container-title-short': 'Proc. Example Res. Conf.' },
+  { id: 'short-magazine', type: 'article-magazine', 'container-title': 'Example Research Magazine',
+    'container-title-short': 'Example Res. Mag.' },
+  { id: 'short-newspaper', type: 'article-newspaper', 'container-title': 'Example Daily Newspaper',
+    'container-title-short': 'Example Daily' },
+].map((item, index) => ({ ...item, title: `Full article title ${index}`, 'title-short': `Short article ${index}`,
+  author, issued: { 'date-parts': [[2024 - index]] } }));
+
+function venueBibliography(data, filename = abbreviatedStyle) {
+  const processor = createProcessor(filename, data);
+  processor.updateItems(data.map(item => item.id));
+  return processor.makeBibliography()[1];
+}
+
+test('journal, proceedings, magazine, and newspaper short names are used without shortening article titles', () => {
+  const entries = venueBibliography(venueItems);
+  venueItems.forEach((item, index) => {
+    assert.ok(entries[index].includes(`<i>${item['container-title-short']}</i>`));
+    assert.ok(!entries[index].includes(item['container-title']));
+    assert.ok(entries[index].includes(item.title));
+    assert.ok(!entries[index].includes(item['title-short']));
+  });
+  // The parent already shortens journal names, but keeps full proceedings names.
+  const parent = venueBibliography(venueItems, 'ieee-no-collapse-citation-order.csl');
+  assert.ok(parent[1].includes(venueItems[1]['container-title']));
+});
+
+test('missing venue abbreviations fall back to full names', () => {
+  const withoutShortNames = venueItems.map(item => {
+    const copy = { ...item };
+    delete copy['container-title-short'];
+    return copy;
+  });
+  const entries = venueBibliography(withoutShortNames);
+  withoutShortNames.forEach((item, index) => assert.ok(entries[index].includes(item['container-title'])));
+});
+
+test('book containers, websites, and unpublished events retain their existing names', () => {
+  const data = [
+    { id: 'chapter', type: 'chapter', title: 'Chapter example', 'container-title': 'Full Book Name', 'container-title-short': 'Book Abbr.' },
+    { id: 'site', type: 'webpage', title: 'Web example', 'container-title': 'Full Website Name', 'container-title-short': 'Web Abbr.' },
+    { id: 'talk', type: 'speech', title: 'Talk example', event: 'Full Event Name' },
+  ].map(item => ({ ...item, author, issued: { 'date-parts': [[2024]] } }));
+  const entries = venueBibliography(data);
+  ['Full Book Name', 'Full Website Name', 'Full Event Name'].forEach((name, index) => assert.ok(entries[index].includes(name)));
+  assert.deepEqual(entries, venueBibliography(data, 'ieee-no-collapse-citation-order.csl'));
 });
 
 test('rendered examples match the reviewed formatting snapshot', () => {

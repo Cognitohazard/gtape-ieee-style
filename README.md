@@ -1,6 +1,6 @@
 # GTAPE IEEE Citation Styles
 
-Three customized IEEE styles based on the official [CSL IEEE style](https://github.com/citation-style-language/styles/blob/master/ieee.csl). This standalone repository tracks that single upstream file, not updates to the entire CSL styles collection.
+Four customized IEEE styles based on the official [CSL IEEE style](https://github.com/citation-style-language/styles/blob/master/ieee.csl). This standalone repository tracks that single upstream file, not updates to the entire CSL styles collection.
 
 ## Install
 
@@ -11,6 +11,7 @@ Download a `.csl` file below, then in Zotero open **Settings → Cite → Styles
 | [ieee.csl](https://raw.githubusercontent.com/Cognitohazard/gtape-ieee-style/master/ieee.csl) | IEEE-GTAPE | Collapsed into a range | Oldest publication first |
 | [ieee-no-collapse.csl](https://raw.githubusercontent.com/Cognitohazard/gtape-ieee-style/master/ieee-no-collapse.csl) | IEEE-GTAPE (No Citation Collapse) | [1], [2], [3] | Oldest publication first |
 | [ieee-no-collapse-citation-order.csl](https://raw.githubusercontent.com/Cognitohazard/gtape-ieee-style/master/ieee-no-collapse-citation-order.csl) | IEEE-GTAPE (No Citation Collapse, Citation Order) | [1], [2], [3] | First appearance in the text (IEEE ordering) |
+| [ieee-no-collapse-citation-order-abbreviated-venues.csl](https://raw.githubusercontent.com/Cognitohazard/gtape-ieee-style/master/ieee-no-collapse-citation-order-abbreviated-venues.csl) | IEEE-GTAPE (No Citation Collapse, Citation Order, Abbreviated Venues) | [1], [2], [3] | First appearance; abbreviated venues when available |
 
 Choose **IEEE-GTAPE (No Citation Collapse, Citation Order)** for IEEE reference numbering with no citation ranges. It assigns [1] to the first source cited, [2] to the next new source, and keeps that number for repeat citations, regardless of publication date.
 
@@ -21,6 +22,18 @@ All variants retain:
 - The existing name initialization and punctuation. Bibliography ordering is selected by the variant in the table above.
 
 There is still a space between initials and the surname; this project does not implement the requested removal of that space.
+
+## Abbreviated venues in Zotero
+
+Choose **IEEE-GTAPE (No Citation Collapse, Citation Order, Abbreviated Venues)** for short journal, conference-proceedings, magazine, and newspaper names. It retains the citation-order variant's other formatting and falls back to the full venue name when no abbreviation is available. Article titles, book titles in chapters, website names, and unpublished event names keep their existing formatting.
+
+The other variants already request abbreviated journal titles; this variant extends that preference to proceedings and other periodicals. CSL requests short names rather than generating acronyms or applying a word-abbreviation dictionary itself.
+
+- **Journal articles:** supply the desired value in Zotero's **Journal Abbr.** field. In the word processor's Zotero **Document Preferences**, automatic journal abbreviations may provide a value instead. Disable **Use MEDLINE journal abbreviations** when you want your own Journal Abbr. values used. See [Zotero's journal-abbreviation guidance](https://www.zotero.org/support/kb/journal_abbreviations).
+- **Conference proceedings and other items without an abbreviation field:** add a line such as `Container Title Short: Proc. Example Res. Conf.` to the item's **Extra** field. Keep the full proceedings title in its regular field. See [Zotero's Extra-field guidance](https://www.zotero.org/support/kb/item_types_and_fields#citing_fields_from_extra).
+- **Unpublished talks without a proceedings title:** the style uses the event name as stored; there is no separate abbreviated event-name field in CSL 1.0.2.
+
+Use the abbreviation required by your venue or publisher. This variant does not invent missing abbreviations.
 
 ## Upstream updates
 
@@ -49,10 +62,10 @@ npm test
 python -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-The rendering tests cover collapsed and expanded citations, page locators, three/four-author boundaries, directors, editor substitution, hidden access fields, publication-date and first-appearance bibliography ordering, repeat citations, and a reviewed output snapshot. When deliberately changing formatting, update `tests/expected-rendering.json` using `UPDATE_RENDER_SNAPSHOT=1 npm test` in a POSIX shell, then inspect the resulting diff. Do not regenerate snapshots merely to make a failing check pass.
+The rendering tests cover collapsed and expanded citations, page locators, three/four-author boundaries, directors, editor substitution, hidden access fields, publication-date and first-appearance bibliography ordering, repeat citations, abbreviated venue names with full-name fallback, and a reviewed output snapshot. When deliberately changing formatting, update `tests/expected-rendering.json` using `UPDATE_RENDER_SNAPSHOT=1 npm test` in a POSIX shell, then inspect the resulting diff. Do not regenerate snapshots merely to make a failing check pass.
 
-Preserve each style's title, ID, and self link. Keep `collapse="citation-number"` only in `ieee.csl`. Keep the bibliography `<sort>` block absent in `ieee-no-collapse-citation-order.csl` so references follow first appearance; preserve the oldest-first sort in the other two styles. The empty-output access macro must retain `<text value=""/>`; an entirely empty macro is invalid CSL.
+Preserve each style's title, ID, and self link. Keep `collapse="citation-number"` only in `ieee.csl`. Keep the bibliography `<sort>` block absent in `ieee-no-collapse-citation-order.csl` and its abbreviated-venues variant so references follow first appearance; preserve the oldest-first sort in the other two styles. The empty-output access macro must retain `<text value=""/>`; an entirely empty macro is invalid CSL.
 
 ## Attribution and license
 
-The styles derive from the [Citation Style Language styles project](https://github.com/citation-style-language/styles). Original authors and contributors remain credited inside all three files. Style adaptations retain the [Creative Commons Attribution-ShareAlike 3.0 license](https://creativecommons.org/licenses/by-sa/3.0/) declared in their `<rights>` elements. GTAPE modifications include author truncation, suppression of access information, bibliography ordering, and the citation-collapse variant.
+The styles derive from the [Citation Style Language styles project](https://github.com/citation-style-language/styles). Original authors and contributors remain credited inside all four files. Style adaptations retain the [Creative Commons Attribution-ShareAlike 3.0 license](https://creativecommons.org/licenses/by-sa/3.0/) declared in their `<rights>` elements. GTAPE modifications include author truncation, suppression of access information, bibliography ordering, and the citation-collapse variant.
